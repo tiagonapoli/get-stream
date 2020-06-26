@@ -1,5 +1,5 @@
 'use strict';
-const pump = require('pump');
+const {pipeline} = require('stream');
 const bufferStream = require('./buffer-stream');
 
 class MaxBufferError extends Error {
@@ -21,7 +21,7 @@ async function getStream(inputStream, options) {
 
 	const {maxBuffer} = options;
 
-	let stream;
+	const stream = bufferStream(options);
 	await new Promise((resolve, reject) => {
 		const rejectPromise = error => {
 			if (error) { // A null check
@@ -31,7 +31,7 @@ async function getStream(inputStream, options) {
 			reject(error);
 		};
 
-		stream = pump(inputStream, bufferStream(options), error => {
+		pipeline(inputStream, stream, error => {
 			if (error) {
 				rejectPromise(error);
 				return;
