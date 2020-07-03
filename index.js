@@ -1,6 +1,9 @@
 'use strict';
 const {pipeline} = require('stream');
+const {promisify} = require('util');
 const bufferStream = require('./buffer-stream');
+
+const streamPipelinePromisified = promisify(pipeline);
 
 class MaxBufferError extends Error {
 	constructor() {
@@ -31,14 +34,7 @@ async function getStream(inputStream, options) {
 			reject(error);
 		};
 
-		pipeline(inputStream, stream, error => {
-			if (error) {
-				rejectPromise(error);
-				return;
-			}
-
-			resolve();
-		});
+		streamPipelinePromisified(inputStream, stream).then(resolve, rejectPromise);
 
 		stream.on('data', () => {
 			if (stream.getBufferedLength() > maxBuffer) {
