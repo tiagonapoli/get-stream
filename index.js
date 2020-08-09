@@ -1,9 +1,9 @@
 'use strict';
-const stream = require('stream');
-const {promisify} = require('util');
+// Const stream = require('stream');
+// const {promisify} = require('util');
 const bufferStream = require('./buffer-stream');
 
-const streamPipelinePromisified = promisify(stream.pipeline);
+// Const streamPipelinePromisified = promisify(stream.pipeline);
 
 class MaxBufferError extends Error {
 	constructor() {
@@ -25,23 +25,18 @@ async function getStream(inputStream, options) {
 	const {maxBuffer} = options;
 
 	const stream = bufferStream(options);
-	await new Promise((resolve, reject) => {
-		const rejectPromise = error => {
-			if (error) { // A null check
-				error.bufferedData = stream.getBufferedValue();
-			}
 
-			reject(error);
-		};
-
-		streamPipelinePromisified(inputStream, stream).then(resolve, rejectPromise);
-
-		stream.on('data', () => {
+	try {
+		for await (const chunk of inputStream) {
+			stream.write(chunk);
 			if (stream.getBufferedLength() > maxBuffer) {
-				rejectPromise(new MaxBufferError());
+				throw new MaxBufferError();
 			}
-		});
-	});
+		}
+	} catch (error) {
+		error.bufferedData = stream.getBufferedValue();
+		throw error;
+	}
 
 	return stream.getBufferedValue();
 }
